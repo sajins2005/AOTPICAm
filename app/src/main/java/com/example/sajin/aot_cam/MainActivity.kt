@@ -1,75 +1,42 @@
 package com.example.sajin.aot_cam
-
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.media.ImageReader
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
-import android.widget.Button
+import android.view.Display
+import android.view.KeyEvent
+import android.view.SurfaceHolder
 import android.widget.ImageView
+import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
+import org.opencv.android.*
+import org.opencv.core.*
+import org.opencv.imgcodecs.Imgcodecs
+import org.opencv.imgproc.Imgproc
+import java.io.File
+
+import java.io.FileOutputStream
 import java.io.IOException
-import android.graphics.BitmapFactory
-import android.graphics.Bitmap
-import android.graphics.SurfaceTexture
-import android.view.*
-import android.view.TextureView.SurfaceTextureListener
-import kotlinx.android.synthetic.main.activity_main.view.*
 
 
-/**
- * Skeleton of an Android Things activity.
- *
- * Android Things peripheral APIs are accessible through the class
- * PeripheralManagerService. For example, the snippet below will open a GPIO pin and
- * set it to HIGH:
- *
- * <pre>{@code
- * val service = PeripheralManagerService()
- * val mLedGpio = service.openGpio("BCM6")
- * mLedGpio.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
- * mLedGpio.value = true
- * }</pre>
- * <p>
- * For more complex peripherals, look for an existing user-space driver, or implement one if none
- * is available.
- *
- * @see <a href="https://github.com/androidthings/contrib-drivers#readme">https://github.com/androidthings/contrib-drivers#readme</a>
- *
- */
-class MainActivity : Activity() {
+class MainActivity : Activity(), LoaderCallbackInterface {
 
     private val TAG = MainActivity::class.java.simpleName
-  private  var imgview:ImageView? =null
-
+    private var imgview: ImageView? = null
     private var mCamera: DoorbellCamera? = null
-
-    /**
-     * Driver for the doorbell button;
-     */
-    //private var mButtonInputDriver: ButtonInputDriver? = null
-
-    /**
-     * A [Handler] for running Camera tasks in the background.
-     */
     private var mCameraHandler: Handler? = null
-
-    /**
-     * An additional thread for running Camera tasks that shouldn't block the UI.
-     */
     private var mCameraThread: HandlerThread? = null
-
-    /**
-     * A [Handler] for running Cloud tasks in the background.
-     */
+    lateinit var pt: String
     private var mCloudHandler: Handler? = null
-lateinit var sh:SurfaceHolder
-    /**
-     * An additional thread for running Cloud tasks that shouldn't block the UI.
-     */
+    lateinit var sh: SurfaceHolder
     private var mCloudThread: HandlerThread? = null
 
     public override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,41 +44,34 @@ lateinit var sh:SurfaceHolder
         setContentView(R.layout.activity_main);
         Log.d(TAG, "Doorbell Activity created.")
 
-        // We need permission to access the camera
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             // A problem occurred auto-granting the permission
             Log.e(TAG, "No permission")
             return
         }
 
+        val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), "CameraDemo")
 
-        // Creates new handlers and associated threads for camera and networking operations.
+        if (!mediaStorageDir.exists()) {
+            !mediaStorageDir.mkdirs()
+        }
+        pt = mediaStorageDir.path + File.separator
+        sh = surfaceView3.holder
         mCameraThread = HandlerThread("CameraBackground")
         mCameraThread!!.start()
         mCameraHandler = Handler(mCameraThread!!.looper)
+        val button = button
 
-       // mCloudThread = HandlerThread("CloudThread")
-       // mCloudThread!!.start()
-      //  mCloudHandler = Handler(mCloudThread!!.looper)
-        val button =button2
-
-        // Initialize the doorbell button driver
-        button.setOnClickListener( {
+        button.setOnClickListener({
             mCamera!!.takePicture()
-
         })
 
-//surfaceView3
-        sh  =surfaceView3.holder
-//sh.setSizeFromLayout()
-        sh.setFixedSize(40,40)
-        // Camera code is complicated, so we've shoved it all in this closet class for you.
+      //  sh.setFixedSize(480, 620)
         mCamera = DoorbellCamera.instance
-      mCamera!!.initializeCamera(this, mCameraHandler!!, mOnImageAvailableListener,    sh
+        mCamera!!.initializeCamera(this, mCameraHandler!!, mOnImageAvailableListener, sh
 
-      )
-//sh.setSizeFromLayout()
-       // surfaceView3.
+        )
 
 
     }
@@ -128,7 +88,7 @@ lateinit var sh:SurfaceHolder
         mCameraThread!!.quitSafely()
         mCloudThread!!.quitSafely()
         try {
-          //  mButtonInputDriver!!.close()
+            //  mButtonInputDriver!!.close()
         } catch (e: IOException) {
             Log.e(TAG, "button driver error", e)
         }
@@ -146,45 +106,199 @@ lateinit var sh:SurfaceHolder
     }
 
 
-
-    /**
-     * Listener for new camera images.
-     */
     private val mOnImageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         val image = reader.acquireLatestImage()
         // get image bytes
         val imageBuf = image.planes[0].buffer
         val imageBytes = ByteArray(imageBuf.remaining())
         imageBuf.get(imageBytes)
-
-       image.close()
-
-     //  onPictureTaken(imageBytes)
-
+        image.close()
+        onPictureTaken(imageBytes)
     }
 
-    /**
-     * Upload image data to Firebase as a doorbell event.
-     */
     private fun onPictureTaken(imageBytes: ByteArray?) {
         if (imageBytes != null) {
-            runOnUiThread( {
+            runOnUiThread({
 
-                     val bMap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                var canvs=   sh.lockCanvas()
+                val bMap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                val fos = FileOutputStream(pt+"image.jpg")
+                try {
+                    fos.write(imageBytes)
+                } finally {
+                    fos.close()
+                }
+           //     sh.setFixedSize()
+                run(pt + "image.jpg", pt + "tt1.png", Imgproc.TM_CCOEFF_NORMED)
+               // var canvs = sh.lockCanvas()
 
 
-                canvs.drawBitmap(bMap, 0F,0F,null)
-surfaceView3.holder.unlockCanvasAndPost(canvs)
+                //canvs.drawBitmap(bMap, Rect(0,0,480,620),Rect(0,0,382,512),null)
+
             })
-
-            // upload image to storage
-
-
         }
     }
 
-    /**
-     * Process image contents with Cloud Vision.
-     */
+    protected var mOpenCVCallBack: BaseLoaderCallback = object : BaseLoaderCallback(this) {
+        override fun onManagerConnected(status: Int) {
+            when (status) {
+                LoaderCallbackInterface.SUCCESS -> {
+                    onOpenCVReady()
+                }
+                else -> {
+                    super.onManagerConnected(status)
+                }
+            }
+        }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+
+        Log.i("DEMO", "Trying to load OpenCV library")
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0, this, mOpenCVCallBack)) {
+            Log.e("DEMO", "Cannot connect to OpenCV Manager")
+        }
+    }
+
+    protected fun onOpenCVReady() {
+        //this should crash if opencv is not loaded
+        // val img = Mat()
+
+        Toast.makeText(applicationContext, "opencv ready", Toast.LENGTH_LONG).show()
+
+    }
+
+    override fun onManagerConnected(status: Int) {
+        Log.e("DEMO", "connected" + Int)
+
+    }
+
+    override fun onPackageInstall(operation: Int,
+                                  callback: InstallCallbackInterface) {
+        // TODO Auto-generated method stub
+
+    }
+
+    public fun run(src: String, templateFile: String,
+                   match_method: Int) {
+        println("\nRunning Template Matching")
+        var img =Imgcodecs.imread(src)
+
+        val templ = Imgcodecs.imread(templateFile)
+
+        // / Create the result matrix
+        val result_cols = img.cols() - templ.cols() + 1
+        val result_rows = img.rows() - templ.rows() + 1
+        val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
+
+        // / Do the Matching and Normalize
+        Imgproc.matchTemplate(img, templ, result, match_method)
+
+        Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
+        Imgproc.threshold(result, result, 0.8, 1.0, Imgproc.THRESH_TOZERO);
+
+        var mmr = Core.minMaxLoc(result)
+        var maxval = mmr.maxVal
+        var matchLoc: Point
+        if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
+            matchLoc = mmr.minLoc
+        } else {
+            matchLoc = mmr.maxLoc
+        }
+        loop@ while (true) {
+            Log.e("DEMO", "__________")
+            mmr = Core.minMaxLoc(result)
+            maxval = mmr.maxVal
+            matchLoc = mmr.maxLoc
+            // dst = img.clone();
+            // / Show me what you got
+            if (maxval > .85) {
+                Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + templ.cols(),
+                        matchLoc.y + templ.rows()), Scalar(0.0, 255.0, 0.0))
+                Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + templ.cols(),
+                        matchLoc.y + templ.rows()), Scalar(0.0, 255.0, 0.0), -1)
+            } else {
+                break@loop
+            }
+
+        }
+
+        // Save the visualized detection.
+        //println("Writing $outFile")
+        Imgcodecs.imwrite(pt + "kk3.png", img)
+        // val return_buff = ByteArray((img.total() * img.channels()) as Int)
+        val bm = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(img, bm)
+        val bMap = bm
+        var canvs = sh.lockCanvas()
+
+
+      canvs.drawBitmap(bMap, 0F, 0F, null)
+        sh.unlockCanvasAndPost(canvs)
+
+    }
+
+
 }
+
+
+
+/*
+class MainActivity : Activity() , CameraBridgeViewBase.CvCameraViewListener2 {
+    private val mLoaderCallback = object : BaseLoaderCallback(this) {
+        override fun onManagerConnected(status: Int) {
+            when (status) {
+
+                LoaderCallbackInterface.SUCCESS -> {
+                    Log.i(TAG, "OpenCV loaded successfully")
+                    mOpenCvCameraView?.enableView()
+                }
+                else -> {
+                    super.onManagerConnected(status)
+                }
+            }
+        }
+    }
+
+    public override fun onResume() {
+        super.onResume()
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback)
+    }
+
+    private var mOpenCvCameraView: CameraBridgeViewBase? = null
+
+    public override fun onCreate(savedInstanceState: Bundle?) {
+        Log.i(TAG, "called onCreate")
+        super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        setContentView(R.layout.activity_main);
+        mOpenCvCameraView = findViewById(R.id.HelloOpenCvView) as CameraBridgeViewBase
+        mOpenCvCameraView!!.visibility = SurfaceView.VISIBLE
+        mOpenCvCameraView!!.setCvCameraViewListener(this)
+    }
+
+    public override fun onPause() {
+        super.onPause()
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView!!.disableView()
+    }
+
+    public override fun onDestroy() {
+        super.onDestroy()
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView!!.disableView()
+    }
+
+    override fun onCameraViewStarted(width: Int, height: Int) {}
+
+    override fun onCameraViewStopped() {}
+
+    override fun onCameraFrame(inputFrame: CvCameraViewFrame): Mat {
+        return inputFrame.rgba()
+    }
+}
+    /*
+
+     */
+        */

@@ -9,34 +9,23 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="584dp"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
 
-
         <SurfaceView
-            android:layout_marginTop="1dp"
             android:id="@+id/surfaceView3"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            />
+            android:layout_height="512dp" />
 
         <Button
-            android:id="@+id/button2"
-            style="@android:style/Widget.Button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginBottom="4dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
+            android:id="@+id/button"
+            android:layout_width="match_parent"
+            android:layout_height="68dp"
             android:text="Button" />
-
     </LinearLayout>
+
 
 </android.support.constraint.ConstraintLayout>

@@ -20,7 +20,7 @@ private constructor() {
     private var mCameraDevice: CameraDevice? = null
 
     private var mCaptureSession: CameraCaptureSession? = null
-private var bcHandler :Handler?=null
+    private var bcHandler: Handler? = null
     /**
      * An [ImageReader] that handles still image capture.
      */
@@ -64,7 +64,7 @@ private var bcHandler :Handler?=null
 
             // When the session is ready, we start capture.
             mCaptureSession = cameraCaptureSession
-            // cameraCaptureSession.setRepeatingRequest()
+
             triggerImageCapture()
         }
 
@@ -131,7 +131,7 @@ private var bcHandler :Handler?=null
 
         // Initialize the image processor
         mImageReader = ImageReader.newInstance(IMAGE_WIDTH, IMAGE_HEIGHT,
-                ImageFormat.YUV_420_888, 2)
+                ImageFormat.JPEG, 5)
         mImageReader!!.setOnImageAvailableListener(
                 imageAvailableListener, backgroundHandler)
 
@@ -156,8 +156,9 @@ private var bcHandler :Handler?=null
         // Here, we create a CameraCaptureSession for capturing still images.
         try {
 
+
             mCameraDevice!!.createCaptureSession(
-                    listOf<Surface>(ss),
+                    listOf<Surface>(mImageReader!!.surface),
                     mSessionCallback, bcHandler)
         } catch (cae: CameraAccessException) {
             Log.e(TAG, "access exception while preparing pic", cae)
@@ -170,8 +171,8 @@ private var bcHandler :Handler?=null
      */
     private fun triggerImageCapture() {
         try {
-            val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            captureBuilder.addTarget(ss)
+            val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+            captureBuilder.addTarget(mImageReader!!.surface)
             // mca
             //  val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             // captureBuilder.addTarget()
@@ -183,8 +184,8 @@ private var bcHandler :Handler?=null
             Log.d(TAG, "Session initialized.")
             //
             var captureRequest = captureBuilder.build()
-            mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback,bcHandler )
-            //   mCaptureSession!!.capture(captureBuilder.build(), mCaptureCallback, null)
+          //  mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback, bcHandler)
+              mCaptureSession!!.capture(captureBuilder.build(), mCaptureCallback, null)
         } catch (cae: CameraAccessException) {
             Log.e(TAG, "camera capture exception", cae)
         }
@@ -204,9 +205,9 @@ private var bcHandler :Handler?=null
     companion object {
         private val TAG = DoorbellCamera::class.java.simpleName
 
-        private val IMAGE_WIDTH = 32
-        private val IMAGE_HEIGHT = 24
-        private val MAX_IMAGES = 2
+        private val IMAGE_WIDTH = 480
+        private val IMAGE_HEIGHT = 620
+        private val MAX_IMAGES = 1
 
         val instance: DoorbellCamera
             get() = InstanceHolder.mCamera
