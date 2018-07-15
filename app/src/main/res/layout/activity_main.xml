@@ -15,16 +15,17 @@
         app:layout_constraintTop_toTopOf="parent">
 
 
-        <SurfaceView
-            android:id="@+id/surfaceView3"
-            android:layout_width="match_parent"
-            android:layout_height="512dp" />
-
         <Button
             android:id="@+id/button"
             android:layout_width="match_parent"
             android:layout_height="68dp"
             android:text="Button" />
+
+        <SurfaceView
+            android:id="@+id/surfaceView3"
+            android:layout_width="match_parent"
+            android:layout_height="512dp" />
+
     </LinearLayout>
 
 

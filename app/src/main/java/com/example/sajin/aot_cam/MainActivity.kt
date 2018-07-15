@@ -4,12 +4,16 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
 import android.graphics.Rect
+import android.media.Image
 import android.media.ImageReader
+import android.media.ImageReader.OnImageAvailableListener
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
+import android.support.v4.content.res.TypedArrayUtils
 import android.util.Log
 import android.view.Display
 import android.view.KeyEvent
@@ -19,12 +23,18 @@ import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
+import org.opencv.highgui.Highgui
 import org.opencv.imgcodecs.Imgcodecs
+import org.opencv.imgcodecs.Imgcodecs.imdecode
 import org.opencv.imgproc.Imgproc
 import java.io.File
+//import org.bytedeco.javacpp.BytePointe
 
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.Buffer
+import java.nio.ByteBuffer
+import java.util.*
 
 
 class MainActivity : Activity(), LoaderCallbackInterface {
@@ -86,7 +96,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         mCamera!!.shutDown()
 
         mCameraThread!!.quitSafely()
-        mCloudThread!!.quitSafely()
+     //   mCloudThread!!.quitSafely()
         try {
             //  mButtonInputDriver!!.close()
         } catch (e: IOException) {
@@ -106,36 +116,57 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     }
 
 
-    private val mOnImageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+    private val mOnImageAvailableListener = OnImageAvailableListener { reader ->
         val image = reader.acquireLatestImage()
+
+       // image.
+// var img=    imageToMat(image)
+//image.close()
+
         // get image bytes
-        val imageBuf = image.planes[0].buffer
+
+      val imageBuf = image.planes[0].buffer
+    // var  buf: byte[]
         val imageBytes = ByteArray(imageBuf.remaining())
+
         imageBuf.get(imageBytes)
-        image.close()
-        onPictureTaken(imageBytes)
+        var img1 =Mat(1,image.height*image.width,CvType.CV_8UC3,imageBuf)
+    var img=   Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+
+//var img =Mat(image.width,image.height,CvType.CV_8UC3);
+  //      img.put(0,0,imageBytes)
+     image.close()
+      onPictureTaken(img)
+
     }
 
-    private fun onPictureTaken(imageBytes: ByteArray?) {
-        if (imageBytes != null) {
-            runOnUiThread({
+    private fun onPictureTaken(ima:Mat) {
+        //if (imageBytes != null) {
+        //    runOnUiThread({
 
-                val bMap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                val fos = FileOutputStream(pt+"image.jpg")
-                try {
-                    fos.write(imageBytes)
-                } finally {
-                    fos.close()
-                }
-           //     sh.setFixedSize()
-                run(pt + "image.jpg", pt + "tt1.png", Imgproc.TM_CCOEFF_NORMED)
-               // var canvs = sh.lockCanvas()
+              // val bMap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+          //  var  dst: ByteBuffer = ByteBuffer.allocate(bMap.getRowBytes()*bMap.getHeight());
+            //   var v: Vector<>
 
-
+              //  bMap.copyPixelsToBuffer()
+                //var canvs = sh.lockCanvas()
                 //canvs.drawBitmap(bMap, Rect(0,0,480,620),Rect(0,0,382,512),null)
 
-            })
-        }
+               // val fos = FileOutputStream(pt+"image.jpg")
+                //try {
+               //     fos.write(imageBytes)
+                //} finally {
+                  //  fos.close()
+                //}
+           //     sh.setFixedSize()
+                run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED)
+               // var canvs = sh.lockCanvas()
+
+//i.close()
+                //canvs.drawBitmap(bMap, Rect(0,0,480,620),Rect(0,0,382,512),null)
+
+          //  })
+    //    }
     }
 
     protected var mOpenCVCallBack: BaseLoaderCallback = object : BaseLoaderCallback(this) {
@@ -180,10 +211,17 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
     }
 
-    public fun run(src: String, templateFile: String,
+    public fun run(img: Mat, templateFile: String,
                    match_method: Int) {
         println("\nRunning Template Matching")
-        var img =Imgcodecs.imread(src)
+     //   val bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+
+                //  imdecode( Mat( By(imageBytes)))
+
+        //var img =  Mat(1,imageBytes.,CvType.CV_8UC1)             //Imgcodecs.imdecode( MatOfByte(), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+//img.put(0,0,imageBytes)
+     //var img=   Highgui.imdecode(raw,CvType.CV_8UC3)
+
 
         val templ = Imgcodecs.imread(templateFile)
 
@@ -213,7 +251,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             matchLoc = mmr.maxLoc
             // dst = img.clone();
             // / Show me what you got
-            if (maxval > .85) {
+            if (maxval > .95) {
                 Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + templ.cols(),
                         matchLoc.y + templ.rows()), Scalar(0.0, 255.0, 0.0))
                 Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + templ.cols(),
@@ -231,14 +269,72 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         val bm = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(img, bm)
         val bMap = bm
-        var canvs = sh.lockCanvas()
+        runOnUiThread({
+
+            var canvs = sh.lockCanvas()
 
 
-      canvs.drawBitmap(bMap, 0F, 0F, null)
-        sh.unlockCanvasAndPost(canvs)
-
+            canvs.drawBitmap(bMap, 0F, 0F, null)
+            sh.unlockCanvasAndPost(canvs)
+        })
     }
 
+
+    fun imageToMat(image: Image): Mat {
+        var buffer: ByteBuffer
+        var rowStride: Int
+        var pixelStride: Int
+        val width = image.getWidth()
+        val height = image.getHeight()
+        var offset = 0
+
+        val planes = image.getPlanes()
+        val data = ByteArray(image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8)
+        val rowData = ByteArray(planes[0].getRowStride())
+
+        for (i in planes.indices) {
+            buffer = planes[i].getBuffer()
+            rowStride = planes[i].getRowStride()
+            pixelStride = planes[i].getPixelStride()
+            val w = if (i == 0) width else width / 2
+            val h = if (i == 0) height else height / 2
+            for (row in 0 until h) {
+                val bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8
+                if (pixelStride == bytesPerPixel) {
+                    val length = w * bytesPerPixel
+                    buffer.get(data, offset, length)
+
+                    // Advance buffer the remainder of the row stride, unless on the last row.
+                    // Otherwise, this will throw an IllegalArgumentException because the buffer
+                    // doesn't include the last padding.
+                    if (h - row != 1) {
+                        buffer.position(buffer.position() + rowStride - length)
+                    }
+                    offset += length
+                } else {
+
+                    // On the last row only read the width of the image minus the pixel stride
+                    // plus one. Otherwise, this will throw a BufferUnderflowException because the
+                    // buffer doesn't include the last padding.
+                    if (h - row == 1) {
+                        buffer.get(rowData, 0, width - pixelStride + 1)
+                    } else {
+                        buffer.get(rowData, 0, rowStride)
+                    }
+
+                    for (col in 0 until w) {
+                        data[offset++] = rowData[col * pixelStride]
+                    }
+                }
+            }
+        }
+
+        // Finally, create the Mat.
+        val mat = Mat(height + height / 2, width, CvType.CV_8UC3)
+        mat.put(0, 0, data)
+
+        return mat
+    }
 
 }
 
