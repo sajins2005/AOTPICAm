@@ -4,8 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.ImageFormat
-import android.media.Image
 import android.media.ImageReader.OnImageAvailableListener
 import android.os.Bundle
 import android.os.Environment
@@ -23,8 +21,6 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
-import java.nio.ByteBuffer
-
 
 class MainActivity : Activity(), LoaderCallbackInterface {
 
@@ -141,7 +137,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         var tt = Imgcodecs.imread(templateFile)
         //  var tt = Mat(templ.rows(),templ.cols(),CvType.CV_8U)
         // Imgproc.Canny(templ,tt,50.0,200.0)
-        //   // / Create the result matrix
+
         val result_cols = img.cols() - tt.cols() + 1
         val result_rows = img.rows() - tt.rows() + 1
         val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
@@ -187,48 +183,5 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         }
     }
 
-
-    fun imageToMat(image: Image): Mat {
-        var buffer: ByteBuffer
-        var rowStride: Int
-        var pixelStride: Int
-        val width = image.getWidth()
-        val height = image.getHeight()
-        var offset = 0
-        val planes = image.getPlanes()
-        val data = ByteArray(image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8)
-        val rowData = ByteArray(planes[0].getRowStride())
-        for (i in planes.indices) {
-            buffer = planes[i].getBuffer()
-            rowStride = planes[i].getRowStride()
-            pixelStride = planes[i].getPixelStride()
-            val w = if (i == 0) width else width / 2
-            val h = if (i == 0) height else height / 2
-            for (row in 0 until h) {
-                val bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8
-                if (pixelStride == bytesPerPixel) {
-                    val length = w * bytesPerPixel
-                    buffer.get(data, offset, length)
-                    if (h - row != 1) {
-                        buffer.position(buffer.position() + rowStride - length)
-                    }
-                    offset += length
-                } else {
-                    if (h - row == 1) {
-                        buffer.get(rowData, 0, width - pixelStride + 1)
-                    } else {
-                        buffer.get(rowData, 0, rowStride)
-                    }
-
-                    for (col in 0 until w) {
-                        data[offset++] = rowData[col * pixelStride]
-                    }
-                }
-            }
-        }
-        val mat = Mat(height + height / 2, width, CvType.CV_8UC3)
-        mat.put(0, 0, data)
-        return mat
-    }
 }
 
