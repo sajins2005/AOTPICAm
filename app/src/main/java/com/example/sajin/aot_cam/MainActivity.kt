@@ -1,21 +1,19 @@
 package com.example.sajin.aot_cam
+
+//import org.bytedeco.javacpp.BytePointe
+
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
-import android.graphics.Rect
 import android.media.Image
-import android.media.ImageReader
 import android.media.ImageReader.OnImageAvailableListener
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
-import android.support.v4.content.res.TypedArrayUtils
 import android.util.Log
-import android.view.Display
 import android.view.KeyEvent
 import android.view.SurfaceHolder
 import android.widget.ImageView
@@ -23,18 +21,15 @@ import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
-import org.opencv.highgui.Highgui
+import org.opencv.features2d.AgastFeatureDetector
+import org.opencv.features2d.Feature2D
+import org.opencv.features2d.FeatureDetector
+import org.opencv.features2d.Features2d
 import org.opencv.imgcodecs.Imgcodecs
-import org.opencv.imgcodecs.Imgcodecs.imdecode
 import org.opencv.imgproc.Imgproc
 import java.io.File
-//import org.bytedeco.javacpp.BytePointe
-
-import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.Buffer
 import java.nio.ByteBuffer
-import java.util.*
 
 
 class MainActivity : Activity(), LoaderCallbackInterface {
@@ -77,7 +72,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             mCamera!!.takePicture()
         })
 
-      //  sh.setFixedSize(480, 620)
+        //  sh.setFixedSize(480, 620)
         mCamera = DoorbellCamera.instance
         mCamera!!.initializeCamera(this, mCameraHandler!!, mOnImageAvailableListener, sh
 
@@ -96,9 +91,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         mCamera!!.shutDown()
 
         mCameraThread!!.quitSafely()
-     //   mCloudThread!!.quitSafely()
         try {
-            //  mButtonInputDriver!!.close()
         } catch (e: IOException) {
             Log.e(TAG, "button driver error", e)
         }
@@ -107,7 +100,6 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_ENTER) {
-            // Doorbell rang!
             Log.d(TAG, "button pressed")
             mCamera!!.takePicture()
             return true
@@ -119,54 +111,22 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     private val mOnImageAvailableListener = OnImageAvailableListener { reader ->
         val image = reader.acquireLatestImage()
 
-       // image.
-// var img=    imageToMat(image)
-//image.close()
 
-        // get image bytes
-
-      val imageBuf = image.planes[0].buffer
-    // var  buf: byte[]
+        val imageBuf = image.planes[0].buffer
+        // var  buf: byte[]
         val imageBytes = ByteArray(imageBuf.remaining())
 
         imageBuf.get(imageBytes)
-        var img1 =Mat(1,image.height*image.width,CvType.CV_8UC3,imageBuf)
-    var img=   Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+        var img1 = Mat(1, image.height * image.width, CvType.CV_8UC3, imageBuf)
+        var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
 
-//var img =Mat(image.width,image.height,CvType.CV_8UC3);
-  //      img.put(0,0,imageBytes)
-     image.close()
-      onPictureTaken(img)
+        image.close()
+        onPictureTaken(img)
 
     }
 
-    private fun onPictureTaken(ima:Mat) {
-        //if (imageBytes != null) {
-        //    runOnUiThread({
-
-              // val bMap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-          //  var  dst: ByteBuffer = ByteBuffer.allocate(bMap.getRowBytes()*bMap.getHeight());
-            //   var v: Vector<>
-
-              //  bMap.copyPixelsToBuffer()
-                //var canvs = sh.lockCanvas()
-                //canvs.drawBitmap(bMap, Rect(0,0,480,620),Rect(0,0,382,512),null)
-
-               // val fos = FileOutputStream(pt+"image.jpg")
-                //try {
-               //     fos.write(imageBytes)
-                //} finally {
-                  //  fos.close()
-                //}
-           //     sh.setFixedSize()
-                run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED)
-               // var canvs = sh.lockCanvas()
-
-//i.close()
-                //canvs.drawBitmap(bMap, Rect(0,0,480,620),Rect(0,0,382,512),null)
-
-          //  })
-    //    }
+    private fun onPictureTaken(ima: Mat) {
+        run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED)
     }
 
     protected var mOpenCVCallBack: BaseLoaderCallback = object : BaseLoaderCallback(this) {
@@ -193,8 +153,6 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     }
 
     protected fun onOpenCVReady() {
-        //this should crash if opencv is not loaded
-        // val img = Mat()
 
         Toast.makeText(applicationContext, "opencv ready", Toast.LENGTH_LONG).show()
 
@@ -214,27 +172,19 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     public fun run(img: Mat, templateFile: String,
                    match_method: Int) {
         println("\nRunning Template Matching")
-     //   val bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-
-                //  imdecode( Mat( By(imageBytes)))
-
-        //var img =  Mat(1,imageBytes.,CvType.CV_8UC1)             //Imgcodecs.imdecode( MatOfByte(), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
-//img.put(0,0,imageBytes)
-     //var img=   Highgui.imdecode(raw,CvType.CV_8UC3)
-
-
-        val templ = Imgcodecs.imread(templateFile)
-
-        // / Create the result matrix
-        val result_cols = img.cols() - templ.cols() + 1
-        val result_rows = img.rows() - templ.rows() + 1
+        var tt = Imgcodecs.imread(templateFile)
+        //  var tt = Mat(templ.rows(),templ.cols(),CvType.CV_8U)
+          // Imgproc.Canny(templ,tt,50.0,200.0)
+        //   // / Create the result matrix
+        val result_cols = img.cols() - tt.cols() + 1
+        val result_rows = img.rows() - tt.rows() + 1
         val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
 
         // / Do the Matching and Normalize
-        Imgproc.matchTemplate(img, templ, result, match_method)
+        Imgproc.matchTemplate(img, tt, result, match_method)
 
         Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
-        Imgproc.threshold(result, result, 0.8, 1.0, Imgproc.THRESH_TOZERO);
+        Imgproc.threshold(result, result, 0.98, 1.0, Imgproc.THRESH_TOZERO);
 
         var mmr = Core.minMaxLoc(result)
         var maxval = mmr.maxVal
@@ -251,20 +201,19 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             matchLoc = mmr.maxLoc
             // dst = img.clone();
             // / Show me what you got
-            if (maxval > .95) {
-                Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + templ.cols(),
-                        matchLoc.y + templ.rows()), Scalar(0.0, 255.0, 0.0))
-                Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + templ.cols(),
-                        matchLoc.y + templ.rows()), Scalar(0.0, 255.0, 0.0), -1)
+            if (maxval > .99) {
+                Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + tt.cols(),
+                        matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0))
+                Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + tt.cols(),
+                        matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0), -1)
             } else {
                 break@loop
             }
 
         }
-
-        // Save the visualized detection.
         //println("Writing $outFile")
         Imgcodecs.imwrite(pt + "kk3.png", img)
+        Imgcodecs.imwrite(pt + "kk2.png", tt)
         // val return_buff = ByteArray((img.total() * img.channels()) as Int)
         val bm = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(img, bm)
@@ -272,8 +221,6 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         runOnUiThread({
 
             var canvs = sh.lockCanvas()
-
-
             canvs.drawBitmap(bMap, 0F, 0F, null)
             sh.unlockCanvasAndPost(canvs)
         })
@@ -303,19 +250,11 @@ class MainActivity : Activity(), LoaderCallbackInterface {
                 if (pixelStride == bytesPerPixel) {
                     val length = w * bytesPerPixel
                     buffer.get(data, offset, length)
-
-                    // Advance buffer the remainder of the row stride, unless on the last row.
-                    // Otherwise, this will throw an IllegalArgumentException because the buffer
-                    // doesn't include the last padding.
                     if (h - row != 1) {
                         buffer.position(buffer.position() + rowStride - length)
                     }
                     offset += length
                 } else {
-
-                    // On the last row only read the width of the image minus the pixel stride
-                    // plus one. Otherwise, this will throw a BufferUnderflowException because the
-                    // buffer doesn't include the last padding.
                     if (h - row == 1) {
                         buffer.get(rowData, 0, width - pixelStride + 1)
                     } else {
@@ -338,63 +277,3 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
 }
 
-
-
-/*
-class MainActivity : Activity() , CameraBridgeViewBase.CvCameraViewListener2 {
-    private val mLoaderCallback = object : BaseLoaderCallback(this) {
-        override fun onManagerConnected(status: Int) {
-            when (status) {
-
-                LoaderCallbackInterface.SUCCESS -> {
-                    Log.i(TAG, "OpenCV loaded successfully")
-                    mOpenCvCameraView?.enableView()
-                }
-                else -> {
-                    super.onManagerConnected(status)
-                }
-            }
-        }
-    }
-
-    public override fun onResume() {
-        super.onResume()
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback)
-    }
-
-    private var mOpenCvCameraView: CameraBridgeViewBase? = null
-
-    public override fun onCreate(savedInstanceState: Bundle?) {
-        Log.i(TAG, "called onCreate")
-        super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        setContentView(R.layout.activity_main);
-        mOpenCvCameraView = findViewById(R.id.HelloOpenCvView) as CameraBridgeViewBase
-        mOpenCvCameraView!!.visibility = SurfaceView.VISIBLE
-        mOpenCvCameraView!!.setCvCameraViewListener(this)
-    }
-
-    public override fun onPause() {
-        super.onPause()
-        if (mOpenCvCameraView != null)
-            mOpenCvCameraView!!.disableView()
-    }
-
-    public override fun onDestroy() {
-        super.onDestroy()
-        if (mOpenCvCameraView != null)
-            mOpenCvCameraView!!.disableView()
-    }
-
-    override fun onCameraViewStarted(width: Int, height: Int) {}
-
-    override fun onCameraViewStopped() {}
-
-    override fun onCameraFrame(inputFrame: CvCameraViewFrame): Mat {
-        return inputFrame.rgba()
-    }
-}
-    /*
-
-     */
-        */

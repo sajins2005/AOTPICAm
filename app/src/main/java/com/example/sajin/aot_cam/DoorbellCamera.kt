@@ -171,7 +171,7 @@ private constructor() {
      */
     private fun triggerImageCapture() {
         try {
-            val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+            val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
             captureBuilder.addTarget(mImageReader!!.surface)
             // mca
             //  val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -184,7 +184,7 @@ private constructor() {
             Log.d(TAG, "Session initialized.")
             //
             var captureRequest = captureBuilder.build()
-          // mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback, bcHandler)
+           mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback, bcHandler)
               mCaptureSession!!.capture(captureBuilder.build(), mCaptureCallback, null)
         } catch (cae: CameraAccessException) {
             Log.e(TAG, "camera capture exception", cae)
@@ -205,8 +205,8 @@ private constructor() {
     companion object {
         private val TAG = DoorbellCamera::class.java.simpleName
 
-        private val IMAGE_WIDTH = 480
-        private val IMAGE_HEIGHT = 620
+        private val IMAGE_WIDTH = 1024
+        private val IMAGE_HEIGHT = 768
         private val MAX_IMAGES = 1
 
         val instance: DoorbellCamera
