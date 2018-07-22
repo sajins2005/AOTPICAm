@@ -151,20 +151,20 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
         Imgproc.threshold(result, result, 0.98, 1.0, Imgproc.THRESH_TOZERO);
 
-        var mmr = Core.minMaxLoc(result)
-        var maxval = mmr.maxVal
+        var maxval :Double
         var matchLoc: Point
-        if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
-            matchLoc = mmr.minLoc
-        } else {
-            matchLoc = mmr.maxLoc
-        }
+
 
         loop@ while (true) {
             Log.e("DEMO", "__________")
-            mmr = Core.minMaxLoc(result)
+           var mmr = Core.minMaxLoc(result)
             maxval = mmr.maxVal
-            matchLoc = mmr.maxLoc
+            if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
+                matchLoc = mmr.minLoc
+            } else {
+                matchLoc = mmr.maxLoc
+            }
+
             if (maxval > .99) {
                 Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + tt.cols(),
                         matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0))
