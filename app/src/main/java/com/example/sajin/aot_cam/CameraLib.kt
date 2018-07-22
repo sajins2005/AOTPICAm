@@ -11,25 +11,16 @@ import android.util.Range
 import android.view.Surface
 import android.view.SurfaceHolder
 
-/**
- * Helper class to deal with methods to deal with images from the camera.
- */
-public class CameraLib// Lazy-loaded singleton, so only one instance of the camera is created.
+
+public class CameraLib
 private constructor() {
 
     private var mCameraDevice: CameraDevice? = null
 
     private var mCaptureSession: CameraCaptureSession? = null
     private var bcHandler: Handler? = null
-    /**
-     * An [ImageReader] that handles still image capture.
-     */
     private var mImageReader: ImageReader? = null
     private lateinit var fps: Array<out Range<Int>>
-
-    /**
-     * Callback handling device state changes
-     */
     private val mStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(cameraDevice: CameraDevice) {
             Log.d(TAG, "Opened camera.")
@@ -144,16 +135,11 @@ private constructor() {
 
     }
 
-    /**
-     * Begin a still image capture
-     */
     fun takePicture() {
         if (mCameraDevice == null) {
             Log.e(TAG, "Cannot capture image. Camera not initialized.")
             return
         }
-
-        // Here, we create a CameraCaptureSession for capturing still images.
         try {
 
 
@@ -166,36 +152,23 @@ private constructor() {
 
     }
 
-    /**
-     * Execute a new capture request within the active session
-     */
     private fun triggerImageCapture() {
         try {
             val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
             captureBuilder.addTarget(mImageReader!!.surface)
-            // mca
-            //  val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            // captureBuilder.addTarget()
 
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-
-            //  Range<Integer> fps[] = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-            //  captureBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,fps[fps.size-1])
             Log.d(TAG, "Session initialized.")
             //
             var captureRequest = captureBuilder.build()
-           mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback, bcHandler)
-              mCaptureSession!!.capture(captureBuilder.build(), mCaptureCallback, null)
+            mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback, bcHandler)
+            mCaptureSession!!.capture(captureBuilder.build(), mCaptureCallback, null)
         } catch (cae: CameraAccessException) {
             Log.e(TAG, "camera capture exception", cae)
         }
 
     }
 
-
-    /**
-     * Close the camera resources
-     */
     fun shutDown() {
         if (mCameraDevice != null) {
             mCameraDevice!!.close()
@@ -212,11 +185,6 @@ private constructor() {
         val instance: CameraLib
             get() = InstanceHolder.mCamera
 
-        /**
-         * Helpful debugging method:  Dump all supported camera formats to log.  You don't need to run
-         * this for normal operation, but it's very helpful when porting this code to different
-         * hardware.
-         */
         fun dumpFormatInfo(context: Context) {
             val manager = context.getSystemService(CAMERA_SERVICE) as CameraManager
             var camIds = arrayOf<String>()

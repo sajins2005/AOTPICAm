@@ -21,10 +21,6 @@ import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
-import org.opencv.features2d.AgastFeatureDetector
-import org.opencv.features2d.Feature2D
-import org.opencv.features2d.FeatureDetector
-import org.opencv.features2d.Features2d
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
