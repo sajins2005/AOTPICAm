@@ -11,17 +11,16 @@ import android.util.Range
 import android.view.Surface
 import android.view.SurfaceHolder
 
-
 public class CameraLib
 private constructor() {
 
     private var mCameraDevice: CameraDevice? = null
-
     private var mCaptureSession: CameraCaptureSession? = null
     private var bcHandler: Handler? = null
     private var mImageReader: ImageReader? = null
     private lateinit var fps: Array<out Range<Int>>
     private val mStateCallback = object : CameraDevice.StateCallback() {
+
         override fun onOpened(cameraDevice: CameraDevice) {
             Log.d(TAG, "Opened camera.")
             mCameraDevice = cameraDevice
@@ -52,7 +51,6 @@ private constructor() {
             if (mCameraDevice == null) {
                 return
             }
-
             // When the session is ready, we start capture.
             mCaptureSession = cameraCaptureSession
 
@@ -69,20 +67,14 @@ private constructor() {
      */
     private val mCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
 
-        override fun onCaptureProgressed(session: CameraCaptureSession,
-                                         request: CaptureRequest,
-                                         partialResult: CaptureResult) {
+        override fun onCaptureProgressed(session: CameraCaptureSession, request: CaptureRequest, partialResult: CaptureResult) {
             Log.d(TAG, "Partial result")
         }
 
-        override fun onCaptureCompleted(session: CameraCaptureSession,
-                                        request: CaptureRequest,
-                                        result: TotalCaptureResult) {
-
-            //session.close()
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+          //  session.close()
             //mCaptureSession = null
             Log.d(TAG, "CaptureSession closed")
-
         }
     }
 
@@ -94,17 +86,11 @@ private constructor() {
     /**
      * Initialize the camera device
      */
-    fun initializeCamera(context: Context,
-                         backgroundHandler: Handler,
-                         imageAvailableListener: ImageReader.OnImageAvailableListener, surfaceT: SurfaceHolder) {
-        // Discover the camera instance
-
+    fun initializeCamera(context: Context, backgroundHandler: Handler, imageAvailableListener: ImageReader.OnImageAvailableListener, surfaceT: SurfaceHolder) {
         ss = surfaceT.surface
-
         val manager = context.getSystemService(CAMERA_SERVICE) as CameraManager
         var camIds = arrayOf<String>()
         try {
-
             camIds = manager.cameraIdList
         } catch (e: CameraAccessException) {
             Log.e(TAG, "Cam access exception getting IDs", e)
@@ -132,7 +118,6 @@ private constructor() {
         } catch (cae: CameraAccessException) {
             Log.d(TAG, "Camera access exception", cae)
         }
-
     }
 
     fun takePicture() {
@@ -149,7 +134,6 @@ private constructor() {
         } catch (cae: CameraAccessException) {
             Log.e(TAG, "access exception while preparing pic", cae)
         }
-
     }
 
     private fun triggerImageCapture() {
@@ -159,14 +143,12 @@ private constructor() {
 
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             Log.d(TAG, "Session initialized.")
-            //
             var captureRequest = captureBuilder.build()
             mCaptureSession!!.setRepeatingRequest(captureRequest, mCaptureCallback, bcHandler)
             mCaptureSession!!.capture(captureBuilder.build(), mCaptureCallback, null)
         } catch (cae: CameraAccessException) {
             Log.e(TAG, "camera capture exception", cae)
         }
-
     }
 
     fun shutDown() {
@@ -184,7 +166,6 @@ private constructor() {
 
         val instance: CameraLib
             get() = InstanceHolder.mCamera
-
         fun dumpFormatInfo(context: Context) {
             val manager = context.getSystemService(CAMERA_SERVICE) as CameraManager
             var camIds = arrayOf<String>()
@@ -216,7 +197,6 @@ private constructor() {
             } catch (e: CameraAccessException) {
                 Log.d(TAG, "Cam access exception getting characteristics.")
             }
-
         }
     }
 }
