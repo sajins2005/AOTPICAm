@@ -36,7 +36,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
     private val TAG = MainActivity::class.java.simpleName
     private var imgview: ImageView? = null
-    private var mCamera: DoorbellCamera? = null
+    private var mCamera: CameraLib? = null
     private var mCameraHandler: Handler? = null
     private var mCameraThread: HandlerThread? = null
     lateinit var pt: String
@@ -73,7 +73,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         })
 
         //  sh.setFixedSize(480, 620)
-        mCamera = DoorbellCamera.instance
+        mCamera = CameraLib.instance
         mCamera!!.initializeCamera(this, mCameraHandler!!, mOnImageAvailableListener, sh
 
         )

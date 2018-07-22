@@ -14,7 +14,7 @@ import android.view.SurfaceHolder
 /**
  * Helper class to deal with methods to deal with images from the camera.
  */
-public class DoorbellCamera// Lazy-loaded singleton, so only one instance of the camera is created.
+public class CameraLib// Lazy-loaded singleton, so only one instance of the camera is created.
 private constructor() {
 
     private var mCameraDevice: CameraDevice? = null
@@ -96,7 +96,7 @@ private constructor() {
     }
 
     public object InstanceHolder {
-        var mCamera = DoorbellCamera()
+        var mCamera = CameraLib()
     }
 
     lateinit var ss: Surface
@@ -203,13 +203,13 @@ private constructor() {
     }
 
     companion object {
-        private val TAG = DoorbellCamera::class.java.simpleName
+        private val TAG = CameraLib::class.java.simpleName
 
         private val IMAGE_WIDTH = 1024
         private val IMAGE_HEIGHT = 768
         private val MAX_IMAGES = 1
 
-        val instance: DoorbellCamera
+        val instance: CameraLib
             get() = InstanceHolder.mCamera
 
         /**
