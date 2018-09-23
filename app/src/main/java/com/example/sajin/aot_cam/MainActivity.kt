@@ -14,6 +14,7 @@ import android.view.KeyEvent
 import android.view.SurfaceHolder
 import android.widget.ImageView
 import android.widget.Toast
+import com.google.android.things.contrib.driver.motorhat.MotorHat
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
@@ -21,8 +22,11 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
+import com.google.android.things.pio.PeripheralManager
 
-class MainActivity : Activity(), LoaderCallbackInterface {
+
+
+class MainActivity : Activity(), LoaderCallbackInterface  {
 
     private val TAG = MainActivity::class.java.simpleName
     private var imgview: ImageView? = null
@@ -37,12 +41,16 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main);
-        Log.d(TAG, "Doorbell Activity created.")
+        Log.d(TAG, "Activity created.")
 
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "No permission")
             return
         }
+        var m = StepperMotor(StepperControl("I2C1"),1)
+m.setSpeed(2000)
+        m.step(1000,"FOoRWARD","SINGLE")
+
         val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "CameraDemo")
         if (!mediaStorageDir.exists()) {
@@ -86,7 +94,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         val imageBytes = ByteArray(imageBuf.remaining())
         imageBuf.get(imageBytes)
         var img1 = Mat(1, image.height * image.width, CvType.CV_8UC3, imageBuf)
-        var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+        var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
         image.close()
 
         onPictureTaken(img)
@@ -134,7 +142,8 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     public fun run(img: Mat, templateFile: String,
                    match_method: Int) {
         println("\nRunning Template Matching")
-        var tt = Imgcodecs.imread(templateFile)
+        var tt = Imgcodecs.imread(templateFile,Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
+
         //  var tt = Mat(templ.rows(),templ.cols(),CvType.CV_8U)
         // Imgproc.Canny(templ,tt,50.0,200.0)
 
@@ -144,7 +153,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
         Imgproc.matchTemplate(img, tt, result, match_method)
 
-        Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
+      //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
         Imgproc.threshold(result, result, 0.98, 1.0, Imgproc.THRESH_TOZERO);
 
         var maxval :Double
@@ -161,7 +170,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
                 matchLoc = mmr.maxLoc
             }
 
-            if (maxval > .99) {
+            if (maxval > .98) {
                 Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + tt.cols(),
                         matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0))
                 Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + tt.cols(),

@@ -3,11 +3,11 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 27
     defaultConfig {
         applicationId "com.example.sajin.aot_cam"
-        minSdkVersion 26
-        targetSdkVersion 26
+        minSdkVersion 27
+        targetSdkVersion 27
         versionCode 0
         versionName "0.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -42,4 +42,5 @@ dependencies {
     compileOnly 'com.google.android.things:androidthings:+'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation project(':openCVLibrary341')
+    implementation 'com.google.android.things.contrib:driver-motorhat:1.0'
 }
