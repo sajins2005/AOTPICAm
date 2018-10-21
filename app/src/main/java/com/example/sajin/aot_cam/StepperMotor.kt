@@ -5,8 +5,8 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
     val MC =controller
     val motornum=num
     val revsteps=steps
-    val sec_per_step = 0.1
-    val  steppingcounter = 0
+    var sec_per_step = 0.1
+    var  steppingcounter = 0
     var currentstep = 0
 
     var PWMA:Int
@@ -48,13 +48,13 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
         }
     }
     fun setSpeed( rpm:  Int) {
-        var sec_per_step = 60.0 / (revsteps * rpm)
-        var steppingcounter = 0
+         sec_per_step = 60.0 / (revsteps * rpm)
+         steppingcounter = 0
     }
     fun oneStep(dir: String , style:String):Int {
         var pwm_a=225
         var  pwm_b = 255
-        var  MICROSTEPS: Int =4
+     //     MICROSTEPS =4
 // first determine what sort of stepping procedure we're up to
         if (style == "SINGLE") {
 

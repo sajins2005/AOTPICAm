@@ -111,7 +111,7 @@ private lateinit var mI2cDevice: I2cDevice
                 / 4096f // 12-bit
 
                 / 1600f) // motor frequency
-                - 1) // pineapple
+                - 1.0) // pineapple
         val prescale = (prescaleval + 0.5f).toByte()
         mI2cDevice.writeRegByte(REG_PRESCALE, prescale)
 
@@ -123,7 +123,7 @@ private lateinit var mI2cDevice: I2cDevice
         } catch (ignored: InterruptedException) {
         }
 
-        mI2cDevice.writeRegByte(REG_MODE_1, (mode1 or RESTART) as Byte)
+       // mI2cDevice.writeRegByte(REG_MODE_1, (mode1 or RESTART) as Byte)
 
         /*  mMotors = arrayOfNulls<DcMotor>(MAX_DC_MOTORS)
         mMotors[0] = DcMotor(8, 9, 10)

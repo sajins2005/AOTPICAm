@@ -14,7 +14,6 @@ import android.view.KeyEvent
 import android.view.SurfaceHolder
 import android.widget.ImageView
 import android.widget.Toast
-import com.google.android.things.contrib.driver.motorhat.MotorHat
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
@@ -22,7 +21,6 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
-import com.google.android.things.pio.PeripheralManager
 
 
 
@@ -48,8 +46,8 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
             return
         }
         var m = StepperMotor(StepperControl("I2C1"),1)
-m.setSpeed(2000)
-        m.step(1000,"FOoRWARD","SINGLE")
+m.setSpeed(1200)
+        m.step(1000,"FORWARD","MICROSTEP")
 
         val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "CameraDemo")
@@ -152,7 +150,7 @@ m.setSpeed(2000)
         val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
 
         Imgproc.matchTemplate(img, tt, result, match_method)
-
+//core.normalize not required
       //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
         Imgproc.threshold(result, result, 0.98, 1.0, Imgproc.THRESH_TOZERO);
 
@@ -170,7 +168,7 @@ m.setSpeed(2000)
                 matchLoc = mmr.maxLoc
             }
 
-            if (maxval > .98) {
+            if (maxval > .90) {
                 Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + tt.cols(),
                         matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0))
                 Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + tt.cols(),
