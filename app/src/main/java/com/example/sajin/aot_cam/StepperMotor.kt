@@ -107,7 +107,7 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
             } else {
                 currentstep -= 1
             }
-
+        }
 // go to next 'step' and wrap around
             currentstep += MICROSTEPS * 4
             currentstep %= MICROSTEPS * 4
@@ -128,7 +128,7 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
                 pwm_a = MICROSTEP_CURVE[currentstep - MICROSTEPS * 3]
                 pwm_b = MICROSTEP_CURVE[MICROSTEPS * 4 - currentstep]
             }
-        }
+
 // go to next 'step' and wrap around
             currentstep += MICROSTEPS * 4
             currentstep %= MICROSTEPS * 4
@@ -140,7 +140,7 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
 // set up coil energizing!
         var coils = arrayOf(false, false, false, false)
 
-        if (style == "MICROSTEP") {
+
             if ((currentstep >= 0) && (currentstep < MICROSTEPS)) {
                 coils = arrayOf(true, true, false, false)
             } else if ((currentstep >= MICROSTEPS) && (currentstep < MICROSTEPS * 2)) {
@@ -150,7 +150,7 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
             } else if ((currentstep >= MICROSTEPS * 3) && (currentstep < MICROSTEPS * 4)) {
                 coils = arrayOf(true, false, false, true)
             }
-        } else {
+             else {
                 var step2coils = arrayOf(
                         arrayOf(true, false, false, false),
                         arrayOf(true, true, false, false),
@@ -161,7 +161,7 @@ class StepperMotor(var controller: StepperControl, var num: Int ,var steps:Int=2
                         arrayOf(false, false, false, true),
                         arrayOf(true, false, false, true))
                 coils = step2coils[currentstep / (MICROSTEPS / 2)]
-            }
+             }
 
 //print "coils state = " + str(coils)
 

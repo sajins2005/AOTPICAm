@@ -123,7 +123,7 @@ private lateinit var mI2cDevice: I2cDevice
         } catch (ignored: InterruptedException) {
         }
 
-       // mI2cDevice.writeRegByte(REG_MODE_1, (mode1 or RESTART) as Byte)
+        mI2cDevice.writeRegByte(REG_MODE_1, (mode1 or RESTART) as Byte)
 
         /*  mMotors = arrayOfNulls<DcMotor>(MAX_DC_MOTORS)
         mMotors[0] = DcMotor(8, 9, 10)
@@ -140,7 +140,7 @@ private lateinit var mI2cDevice: I2cDevice
     }
 
     @Throws(IOException::class)
-     fun setPwm(channel: Int, on: Int, off: Int) {
+     fun   setPwm(channel: Int, on: Int, off: Int) {
         val offset = 4 * channel
         mI2cDevice.writeRegByte(REG_LED_0_ON_L + offset, (on and 0xFF).toByte())
         mI2cDevice.writeRegByte(REG_LED_0_ON_H + offset, (on shr 8).toByte())
@@ -153,7 +153,7 @@ private lateinit var mI2cDevice: I2cDevice
         if (mI2cDevice == null) {
             throw IllegalStateException("I2C device not open")
         }
-       // mMotors[motor].setSpeed(speed)
+    //    mMotors[motor].setSpeed(speed)
     }
 
     @Throws(IOException::class)

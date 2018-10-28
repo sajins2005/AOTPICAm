@@ -108,7 +108,7 @@ private constructor() {
 
         // Initialize the image processor
         mImageReader = ImageReader.newInstance(IMAGE_WIDTH, IMAGE_HEIGHT,
-                ImageFormat.JPEG, 2)
+                ImageFormat.JPEG, 5)
         mImageReader!!.setOnImageAvailableListener(
                 imageAvailableListener, backgroundHandler)
 
@@ -162,7 +162,7 @@ private constructor() {
 
         private val IMAGE_WIDTH = 1024
         private val IMAGE_HEIGHT = 768
-        private val MAX_IMAGES = 1
+        private val MAX_IMAGES = 5
 
         val instance: CameraLib
             get() = InstanceHolder.mCamera

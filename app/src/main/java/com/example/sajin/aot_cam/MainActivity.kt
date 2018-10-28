@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.media.ImageReader.OnImageAvailableListener
 import android.os.Bundle
 import android.os.Environment
@@ -46,8 +47,11 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
             return
         }
         var m = StepperMotor(StepperControl("I2C1"),1)
-m.setSpeed(1200)
-        m.step(1000,"FORWARD","MICROSTEP")
+        m.setSpeed(1200)
+        button4.setOnClickListener{
+            m.step(400,"FORWARD","INTERLEAVE")
+
+        }
 
         val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "CameraDemo")
@@ -148,7 +152,7 @@ m.setSpeed(1200)
         val result_cols = img.cols() - tt.cols() + 1
         val result_rows = img.rows() - tt.rows() + 1
         val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
-
+      
         Imgproc.matchTemplate(img, tt, result, match_method)
 //core.normalize not required
       //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
@@ -171,6 +175,7 @@ m.setSpeed(1200)
             if (maxval > .90) {
                 Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + tt.cols(),
                         matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0))
+
                 Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + tt.cols(),
                         matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0), -1)
             } else {
@@ -185,6 +190,7 @@ m.setSpeed(1200)
         val bMap = bm
         runOnUiThread {
             var canvs = sh.lockCanvas()
+            sh.setFixedSize(1024,768)
             canvs.drawBitmap(bMap, 0F, 0F, null)
             sh.unlockCanvasAndPost(canvs)
         }
