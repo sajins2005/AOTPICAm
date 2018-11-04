@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.PixelFormat
 import android.media.ImageReader.OnImageAvailableListener
 import android.os.Bundle
 import android.os.Environment
@@ -15,17 +14,21 @@ import android.view.KeyEvent
 import android.view.SurfaceHolder
 import android.widget.ImageView
 import android.widget.Toast
+import com.example.sajin.aot_cam.Constants.PwmVals
+import com.example.sajin.aot_cam.Constants.StepperDirection
+import com.example.sajin.aot_cam.Constants.StepperStyle
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
+import org.opencv.features2d.DescriptorMatcher
+import org.opencv.features2d.ORB
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
 
 
-
-class MainActivity : Activity(), LoaderCallbackInterface  {
+class MainActivity : Activity(), LoaderCallbackInterface {
 
     private val TAG = MainActivity::class.java.simpleName
     private var imgview: ImageView? = null
@@ -46,10 +49,14 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
             Log.e(TAG, "No permission")
             return
         }
-        var m = StepperMotor(StepperControl("I2C1"),1)
-        m.setSpeed(1200)
-        button4.setOnClickListener{
-            m.step(400,"FORWARD","INTERLEAVE")
+        var m = StepperMotorController(PwmController("I2C1"), PwmVals.STEPPER_ONE)
+        m.setSpeed(20)
+        button4.setOnClickListener {
+            var start = System.currentTimeMillis()
+            m.step(400, StepperDirection.FORWARD, StepperStyle.DOUBLE)
+            val b = System.currentTimeMillis() - start
+            Log.d(TAG, b.toString() + "=====================")
+            m.reset()
 
         }
 
@@ -64,7 +71,7 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
         mCameraThread!!.start()
         mCameraHandler = Handler(mCameraThread!!.looper)
         val button = button
-        button.setOnClickListener{
+        button.setOnClickListener {
             mCamera!!.takePicture()
         }
         mCamera = CameraLib.instance
@@ -144,7 +151,7 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
     public fun run(img: Mat, templateFile: String,
                    match_method: Int) {
         println("\nRunning Template Matching")
-        var tt = Imgcodecs.imread(templateFile,Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
+        var tt = Imgcodecs.imread(templateFile, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
 
         //  var tt = Mat(templ.rows(),templ.cols(),CvType.CV_8U)
         // Imgproc.Canny(templ,tt,50.0,200.0)
@@ -152,19 +159,34 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
         val result_cols = img.cols() - tt.cols() + 1
         val result_rows = img.rows() - tt.rows() + 1
         val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
-      
+
         Imgproc.matchTemplate(img, tt, result, match_method)
 //core.normalize not required
-      //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
+        //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
         Imgproc.threshold(result, result, 0.98, 1.0, Imgproc.THRESH_TOZERO);
-
-        var maxval :Double
+        var maxval: Double
         var matchLoc: Point
+
+        var detector = ORB.create()   // astFeatureDetector.create()
+
+        var desc1 = Mat()
+        var desc2 = Mat()
+        var keypoint1 = MatOfKeyPoint()
+        var keypoint2 = MatOfKeyPoint()
+        var set1 = detector.detect(tt, keypoint1)
+        var set2 = detector.detect(img, keypoint2)
+
+        detector.compute(tt, keypoint1, desc1)
+
+        detector.compute(img, keypoint2, desc2)
+        var matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED)
+        var matches = MatOfDMatch()
+        matcher.match(desc1, desc2, matches)
 
 
         loop@ while (true) {
             Log.e("DEMO", "__________")
-           var mmr = Core.minMaxLoc(result)
+            var mmr = Core.minMaxLoc(result)
             maxval = mmr.maxVal
             if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
                 matchLoc = mmr.minLoc
@@ -190,7 +212,7 @@ class MainActivity : Activity(), LoaderCallbackInterface  {
         val bMap = bm
         runOnUiThread {
             var canvs = sh.lockCanvas()
-            sh.setFixedSize(1024,768)
+            sh.setFixedSize(1280, 960)
             canvs.drawBitmap(bMap, 0F, 0F, null)
             sh.unlockCanvasAndPost(canvs)
         }
