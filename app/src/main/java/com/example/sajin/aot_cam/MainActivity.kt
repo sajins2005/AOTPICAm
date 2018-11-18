@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.media.ImageReader.OnImageAvailableListener
+import android.opengl.Visibility
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -12,6 +13,7 @@ import android.os.HandlerThread
 import android.util.Log
 import android.view.KeyEvent
 import android.view.SurfaceHolder
+import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
 import com.example.sajin.aot_cam.Constants.PwmVals
@@ -89,6 +91,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         mCameraThread!!.start()
         mCameraHandler = Handler(mCameraThread!!.looper)
         val button = button
+        button.visibility=View.INVISIBLE
         button.setOnClickListener {
             mCamera!!.takePicture()
         }
@@ -154,6 +157,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     }
 
     protected fun onOpenCVReady() {
+        button.visibility =View.VISIBLE
         Toast.makeText(applicationContext, "opencv ready", Toast.LENGTH_LONG).show()
     }
 
