@@ -1,13 +1,13 @@
 package com.example.sajin.aot_cam.Constants
 
-enum class PwmVals (var vals:Int ){
+enum class PwmVals(var vals: Int) {
 
 
-    DC_PIN_LOW ( 0),
-    DC_PIN_HIGH ( 4096),
+    DC_PIN_LOW(0),
+    DC_PIN_HIGH(4096),
 
-    MIN_SPEED (0),
-    MAX_SPEED (255),
+    MIN_SPEED(0),
+    MAX_SPEED(255),
 
 
     MOTOR_ONE(1),
@@ -22,45 +22,46 @@ enum class PwmVals (var vals:Int ){
 
 }
 
-enum class StepperStyle(){
+enum class StepperStyle() {
     SINGLE,
     DOUBLE,
     INTERLEAVE,
     MICROSTEP
 }
-enum class  StepperDirection()
-{
+
+enum class StepperDirection() {
     FORWARD,
     BACKWARD
 
 }
- data class STepperPin (val motorNumber:PwmVals ){
-     val PWMA:Int
-     val AIN2:Int
-     val AIN1:Int
-     val PWMB :Int
-     val BIN2 :Int
-     val BIN1 :Int
 
-     init {
-         if (motorNumber==PwmVals.STEPPER_ONE ) {
-             PWMA = 2
-             AIN2 = 3
-             AIN1 = 4
-             PWMB = 7
-             BIN2 = 6
-             BIN1 = 5
+data class STepperPin(val motorNumber: PwmVals) {
+    val PWMA: Int
+    val AIN2: Int
+    val AIN1: Int
+    val PWMB: Int
+    val BIN2: Int
+    val BIN1: Int
 
-         } else if (motorNumber==PwmVals.STEPPER_TWO) {
-             PWMA = 2
-             AIN2 = 3
-             AIN1 = 4
-             PWMB = 7
-             BIN2 = 6
-             BIN1 = 5
-         } else {
+    init {
+        if (motorNumber == PwmVals.STEPPER_ONE) {
+            PWMA = 8
+            AIN2 = 9
+            AIN1 = 10
+            PWMB = 13
+            BIN2 = 12
+            BIN1 = 11
 
-             throw (Exception("MotorHAT Stepper must be STEPPER_ONE or  STEPPER_TWO"))
-         }
-     }
+        } else if (motorNumber == PwmVals.STEPPER_TWO) {
+            PWMA = 2
+            AIN2 = 3
+            AIN1 = 4
+            PWMB = 7
+            BIN2 = 6
+            BIN1 = 5
+        } else {
+
+            throw (Exception("MotorHAT Stepper must be STEPPER_ONE or  STEPPER_TWO"))
+        }
+    }
 }

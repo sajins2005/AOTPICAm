@@ -49,14 +49,32 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             Log.e(TAG, "No permission")
             return
         }
-        var m = StepperMotorController(PwmController("I2C1"), PwmVals.STEPPER_ONE)
-        m.setSpeed(20)
+        var stepcontroll = PwmController("I2C1")
+
         button4.setOnClickListener {
             var start = System.currentTimeMillis()
-            m.step(400, StepperDirection.FORWARD, StepperStyle.DOUBLE)
-            val b = System.currentTimeMillis() - start
-            Log.d(TAG, b.toString() + "=====================")
-            m.reset()
+            Thread {
+                var m1 = StepperMotorController(stepcontroll, PwmVals.STEPPER_TWO)
+                m1.setSpeed(50)
+                m1.step(8000, StepperDirection.BACKWARD, StepperStyle.DOUBLE)
+                val b = System.currentTimeMillis() - start
+                Log.d(TAG, b.toString() + "=====================")
+                m1.reset()
+
+            }.start()
+            Thread {
+                var m2 = StepperMotorController(stepcontroll, PwmVals.STEPPER_ONE)
+                m2.setSpeed(50)
+                m2.step(8000, StepperDirection.FORWARD, StepperStyle.DOUBLE)
+                val b = System.currentTimeMillis() - start
+                Log.d(TAG, b.toString() + "=====================")
+                m2.reset()
+
+            }.start()
+
+            // stepperone!!.start()
+            // var  stepperoneHandler = Handler(mCameraThread!!.looper)
+
 
         }
 
