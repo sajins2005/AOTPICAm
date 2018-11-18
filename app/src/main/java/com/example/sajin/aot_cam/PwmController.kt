@@ -61,7 +61,7 @@ class PwmController(i2cBusName: String, i2cAddress: Int = PwmVals.DefualtI2cAddr
         mode1 = (oldmode1 and 0x7f) or PwmRegVal.SLEEP.regval
         // Sleep while we set the prescale value.
         mI2cDevice.writeRegByte(PwmRegistry.MODE1.address, mode1.toByte())
-        val prescaleval = (25000000f / (4096f * 300f) - 1).toInt()
+        val prescaleval = (25000000f / (4096f * 1500f) - 1).toInt()
         val prescale = (prescaleval).toByte()
         mI2cDevice.writeRegByte(PwmRegistry.PRESCALE.address, prescale)
         TimeUnit.MICROSECONDS.sleep(500)
