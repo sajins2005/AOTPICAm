@@ -17,11 +17,15 @@ import android.widget.Toast
 import com.example.sajin.aot_cam.Constants.PwmVals
 import com.example.sajin.aot_cam.Constants.StepperDirection
 import com.example.sajin.aot_cam.Constants.StepperStyle
+import io.reactivex.BackpressureStrategy
+import io.reactivex.Flowable
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.functions.BiFunction
+import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.*
 import org.opencv.core.*
-import org.opencv.features2d.DescriptorMatcher
-import org.opencv.features2d.ORB
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
@@ -97,6 +101,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     }
 
     override fun onDestroy() {
+
         super.onDestroy()
         mCamera!!.shutDown()
         mCameraThread!!.quitSafely()
@@ -116,19 +121,45 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     }
 
     private val mOnImageAvailableListener = OnImageAvailableListener { reader ->
-        val image = reader.acquireLatestImage()
-        val imageBuf = image.planes[0].buffer
-        val imageBytes = ByteArray(imageBuf.remaining())
-        imageBuf.get(imageBytes)
-        var img1 = Mat(1, image.height * image.width, CvType.CV_8UC3, imageBuf)
-        var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
-        image.close()
 
-        onPictureTaken(img)
+        val image = reader.acquireLatestImage()
+        if (image!=null) {
+            val imageBuf = image.planes[0].buffer
+            val imageBytes = ByteArray(imageBuf.remaining())
+            imageBuf.get(imageBytes)
+            var img1 = Mat(1, image.height * image.width, CvType.CV_8UC3, imageBuf)
+            var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
+            image.close()
+            var imgob: Flowable<Mat> = Flowable.create<Mat>({
+                it->
+                it.onNext(img)
+
+            },BackpressureStrategy.DROP)
+
+
+
+                //emitter.onComplete()
+            imgob.subscribeOn(Schedulers.io())
+            onPictureTaken(imgob)
+        }
     }
 
-    private fun onPictureTaken(ima: Mat) {
-        run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED)
+    private fun onPictureTaken(ima: Flowable<Mat>) {
+        var ob= run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED)
+                 .observeOn(AndroidSchedulers.mainThread())
+                 .subscribe({
+
+                         var canvs = sh.lockCanvas()
+                         sh.setFixedSize(1024, 768)
+                         canvs.drawBitmap(it, 0F, 0F, null)
+                         sh.unlockCanvasAndPost(canvs)
+
+                     },{
+                     Log.d("error",it.message)
+                     throw it
+                 })
+
+
     }
 
     protected var mOpenCVCallBack: BaseLoaderCallback = object : BaseLoaderCallback(this) {
@@ -166,26 +197,73 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         // TODO Auto-generated method stub
     }
 
-    public fun run(img: Mat, templateFile: String,
-                   match_method: Int) {
-        println("\nRunning Template Matching")
-        var tt = Imgcodecs.imread(templateFile, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
+    public fun run(img: Flowable<Mat>, templateFile: String,
+                   match_method: Int): Flowable<Bitmap> {
+        //   println("\nRunning Template Matching")
+        var tt = Flowable.create<Mat>( {
+          var tt=  Imgcodecs.imread(templateFile, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
+            it.onNext(tt)
+        },BackpressureStrategy.BUFFER).subscribeOn(Schedulers.io())
 
-        //  var tt = Mat(templ.rows(),templ.cols(),CvType.CV_8U)
-        // Imgproc.Canny(templ,tt,50.0,200.0)
+        var obBmp= Flowable.zip( img,tt, BiFunction { cameraImg: Mat, template: Mat ->
+            Log.d("Camera++++++++++", cameraImg.cols().toString())
+            val result_cols = cameraImg.cols() -template.cols() + 1
+            val result_rows = cameraImg.rows() - template.rows() + 1
+            val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
+            Imgproc.matchTemplate(cameraImg, template, result, match_method)
+            Imgproc.threshold(result, result, 0.90, 1.0, Imgproc.THRESH_TOZERO);
+            var maxval: Double
+            var matchLoc: Point
 
-        val result_cols = img.cols() - tt.cols() + 1
-        val result_rows = img.rows() - tt.rows() + 1
-        val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
+            loop@ while (true) {
+                Log.e("DEMO", "__________")
+                var mmr = Core.minMaxLoc(result)
+                maxval = mmr.maxVal
+                if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
+                    matchLoc = mmr.minLoc
+                } else {
+                    matchLoc = mmr.maxLoc
+                }
+                //p =Mat(img.rows()+tt.rows(), img.cols()+tt.cols(),  CvType.CV_8UC3)
+                //      Features2d.drawMatches(tt,keypoint1,img,keypoint2,matches,p)
+                if (maxval > .90) {
+                    Imgproc.rectangle(cameraImg, matchLoc, Point(matchLoc.x + template.cols(),
+                            matchLoc.y + template.rows()), Scalar(0.0, 255.0, 0.0))
+                    Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + template.cols(),
+                            matchLoc.y + template.rows()), Scalar(0.0, 255.0, 0.0), -1)
 
-        Imgproc.matchTemplate(img, tt, result, match_method)
+                } else {
+                    break@loop
+                }
+            }
+            Imgcodecs.imwrite(pt + "kk3.png", cameraImg)
+            val bm = Bitmap.createBitmap(cameraImg.cols(), cameraImg.rows(), Bitmap.Config.ARGB_8888)
+            Utils.matToBitmap(cameraImg, bm)
+
+            return@BiFunction bm
+        }).subscribeOn(Schedulers.io())
+
+      //  img.subscribe().dispose()
+        //tt.subscribe().dispose()
+return obBmp
+
+    }
+
+    //  return@map bMap
+
+
+    // }.subscribeOn(Schedulers.io()).
+
+
+    //   var tt = Mat(templ.rows(),templ.cols(),CvType.CV_8U)
+    // Imgproc.Canny(templ,tt,50.0,200.0)
+
+
 //core.normalize not required
-        //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
-        Imgproc.threshold(result, result, 0.98, 1.0, Imgproc.THRESH_TOZERO);
-        var maxval: Double
-        var matchLoc: Point
+    //  Core.normalize(result, result, 0.0, 1.0, Core.NORM_MINMAX, -1, Mat())
 
-        var detector = ORB.create()   // astFeatureDetector.create()
+
+    /*    var detector = ORB.create()   // astFeatureDetector.create()
 
         var desc1 = Mat()
         var desc2 = Mat()
@@ -197,44 +275,26 @@ class MainActivity : Activity(), LoaderCallbackInterface {
         detector.compute(tt, keypoint1, desc1)
 
         detector.compute(img, keypoint2, desc2)
-        var matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED)
+        var matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE)
         var matches = MatOfDMatch()
         matcher.match(desc1, desc2, matches)
+        var d=matches.toList()
+        var p:Mat
+*/
 
 
-        loop@ while (true) {
-            Log.e("DEMO", "__________")
-            var mmr = Core.minMaxLoc(result)
-            maxval = mmr.maxVal
-            if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
-                matchLoc = mmr.minLoc
-            } else {
-                matchLoc = mmr.maxLoc
-            }
+    //  Imgcodecs.imwrite(pt + "kk3.png", img)
+    // Imgcodecs.imwrite(pt + "kk2.png", tt)
 
-            if (maxval > .90) {
-                Imgproc.rectangle(img, matchLoc, Point(matchLoc.x + tt.cols(),
-                        matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0))
-
-                Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + tt.cols(),
-                        matchLoc.y + tt.rows()), Scalar(0.0, 255.0, 0.0), -1)
-            } else {
-                break@loop
-            }
-        }
-
-        Imgcodecs.imwrite(pt + "kk3.png", img)
-        Imgcodecs.imwrite(pt + "kk2.png", tt)
-        val bm = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888)
-        Utils.matToBitmap(img, bm)
-        val bMap = bm
-        runOnUiThread {
-            var canvs = sh.lockCanvas()
-            sh.setFixedSize(1280, 960)
-            canvs.drawBitmap(bMap, 0F, 0F, null)
-            sh.unlockCanvasAndPost(canvs)
-        }
+    /*unOnUiThread
+    {
+        var canvs = sh.lockCanvas()
+        sh.setFixedSize(1024, 768)
+        canvs.drawBitmap(bMap, 0F, 0F, null)
+        sh.unlockCanvasAndPost(canvs)
     }
-
+}
+}
+*/
 }
 

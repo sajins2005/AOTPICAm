@@ -19,6 +19,7 @@ private constructor() {
     private var bcHandler: Handler? = null
     private var mImageReader: ImageReader? = null
     private lateinit var fps: Array<out Range<Int>>
+    //Vedio
     private val mStateCallback = object : CameraDevice.StateCallback() {
 
         override fun onOpened(cameraDevice: CameraDevice) {
@@ -72,7 +73,7 @@ private constructor() {
         }
 
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-          //  session.close()
+            //  session.close()
             //mCaptureSession = null
             Log.d(TAG, "CaptureSession closed")
         }
@@ -108,7 +109,7 @@ private constructor() {
 
         // Initialize the image processor
         mImageReader = ImageReader.newInstance(IMAGE_WIDTH, IMAGE_HEIGHT,
-                ImageFormat.JPEG, 5)
+                ImageFormat.JPEG, 2)
         mImageReader!!.setOnImageAvailableListener(
                 imageAvailableListener, backgroundHandler)
 
@@ -140,7 +141,6 @@ private constructor() {
         try {
             val captureBuilder = mCameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
             captureBuilder.addTarget(mImageReader!!.surface)
-
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             Log.d(TAG, "Session initialized.")
             var captureRequest = captureBuilder.build()
@@ -166,6 +166,7 @@ private constructor() {
 
         val instance: CameraLib
             get() = InstanceHolder.mCamera
+
         fun dumpFormatInfo(context: Context) {
             val manager = context.getSystemService(CAMERA_SERVICE) as CameraManager
             var camIds = arrayOf<String>()
