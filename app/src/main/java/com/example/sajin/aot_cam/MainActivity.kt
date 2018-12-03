@@ -21,6 +21,7 @@ import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.functions.BiFunction
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
@@ -30,6 +31,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 
 class MainActivity : Activity(), LoaderCallbackInterface {
@@ -122,44 +124,61 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
     private val mOnImageAvailableListener = OnImageAvailableListener { reader ->
 
-        val image = reader.acquireLatestImage()
-        if (image!=null) {
-            val imageBuf = image.planes[0].buffer
-            val imageBytes = ByteArray(imageBuf.remaining())
-            imageBuf.get(imageBytes)
-            var img1 = Mat(1, image.height * image.width, CvType.CV_8UC3, imageBuf)
-            var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
-            image.close()
+
+
             var imgob: Flowable<Mat> = Flowable.create<Mat>({
                 it->
-                it.onNext(img)
+                val image = reader.acquireLatestImage()
+                if (image!=null) {
+                    var width =image.width
+                    var height=image.height
+                    val imageBuf = image.planes[0].buffer
+                    val imageBytes = ByteArray(imageBuf.remaining())
+                    imageBuf.get(imageBytes)
+                    image.close()
+                    var img1 = Mat(1, height *width, CvType.CV_8UC3, imageBuf)
+                    var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
 
-            },BackpressureStrategy.DROP)
 
+                    if  (!it.isCancelled)
+                    {
+                        it.onNext(img)
+                    }
+                    else
+                    {
+                        Log.d("Subscribe", "cancelled")
+                    }
+                }else{
+                    Log.d("Image" ,"image null")
+                   // image!!.close()
+                }
 
-
+            },BackpressureStrategy.BUFFER).subscribeOn(Schedulers.io()).take(2)
                 //emitter.onComplete()
-            imgob.subscribeOn(Schedulers.io())
-            onPictureTaken(imgob)
-        }
+           // imgob.subscribeOn(Schedulers.io())
+            onPictureTaken(imgob.timeout(10,TimeUnit.SECONDS))
+
     }
 
     private fun onPictureTaken(ima: Flowable<Mat>) {
-        var ob= run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED)
+      var disp=  CompositeDisposable()
+      disp.add(  run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED).subscribeOn(Schedulers.io())
                  .observeOn(AndroidSchedulers.mainThread())
-                 .subscribe({
+               .subscribe({
 
                          var canvs = sh.lockCanvas()
-                         sh.setFixedSize(1024, 768)
+                         sh.setFixedSize(640, 480)
                          canvs.drawBitmap(it, 0F, 0F, null)
                          sh.unlockCanvasAndPost(canvs)
 
                      },{
                      Log.d("error",it.message)
-                     throw it
-                 })
+                    // throw it
+                 }))
 
 
+     //  disp.clear()
+      //  disp.dispose()
     }
 
     protected var mOpenCVCallBack: BaseLoaderCallback = object : BaseLoaderCallback(this) {
@@ -178,9 +197,9 @@ class MainActivity : Activity(), LoaderCallbackInterface {
 
     override fun onResume() {
         super.onResume()
-        Log.i("DEMO", "Trying to load OpenCV library")
+
         if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0, this, mOpenCVCallBack)) {
-            Log.e("DEMO", "Cannot connect to OpenCV Manager")
+            Log.e("OPENCV", "Cannot connect to OpenCV Manager")
         }
     }
 
@@ -189,7 +208,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     }
 
     override fun onManagerConnected(status: Int) {
-        Log.e("DEMO", "connected" + Int)
+        Log.e("OPENCV", "connected" + Int)
     }
 
     override fun onPackageInstall(operation: Int,
@@ -205,7 +224,7 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             it.onNext(tt)
         },BackpressureStrategy.BUFFER).subscribeOn(Schedulers.io())
 
-        var obBmp= Flowable.zip( img,tt, BiFunction { cameraImg: Mat, template: Mat ->
+        var obBmp= img.zipWith(tt, BiFunction { cameraImg: Mat, template: Mat ->
             Log.d("Camera++++++++++", cameraImg.cols().toString())
             val result_cols = cameraImg.cols() -template.cols() + 1
             val result_rows = cameraImg.rows() - template.rows() + 1
