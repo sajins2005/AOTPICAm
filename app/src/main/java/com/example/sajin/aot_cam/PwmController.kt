@@ -14,6 +14,7 @@ class PwmController(i2cBusName: String, i2cAddress: Int = PwmVals.DefualtI2cAddr
 
     init {
         val pioService = PeripheralManager.getInstance()
+
         val device = pioService.openI2cDevice(i2cBusName, i2cAddress)
         try {
             initialize(device)
@@ -23,7 +24,6 @@ class PwmController(i2cBusName: String, i2cAddress: Int = PwmVals.DefualtI2cAddr
             } catch (ignored: IOException) {
             } catch (ignored: RuntimeException) {
             }
-
             throw e
         } catch (e: RuntimeException) {
             try {

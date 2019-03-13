@@ -2,13 +2,16 @@ package com.example.sajin.aot_cam
 
 import android.Manifest
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.ImageReader.OnImageAvailableListener
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.MediaStore.Images.Media.insertImage
 import android.util.Log
 import android.view.KeyEvent
 import android.view.SurfaceHolder
@@ -17,9 +20,7 @@ import android.widget.Toast
 import com.example.sajin.aot_cam.Constants.PwmVals
 import com.example.sajin.aot_cam.Constants.StepperDirection
 import com.example.sajin.aot_cam.Constants.StepperStyle
-import io.reactivex.BackpressureStrategy
-import io.reactivex.Flowable
-import io.reactivex.Observable
+import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.functions.BiFunction
@@ -31,20 +32,24 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
+import java.lang.ref.WeakReference
+import java.nio.ByteBuffer
+import java.util.concurrent.Callable
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 
 class MainActivity : Activity(), LoaderCallbackInterface {
 
     private val TAG = MainActivity::class.java.simpleName
-    private var imgview: ImageView? = null
+   // private var imgview: ImageView? = null
     private var mCamera: CameraLib? = null
     private var mCameraHandler: Handler? = null
     private var mCameraThread: HandlerThread? = null
     lateinit var pt: String
-    private var mCloudHandler: Handler? = null
-    lateinit var sh: SurfaceHolder
-    private var mCloudThread: HandlerThread? = null
+   // private var mCloudHandler: Handler? = null
+    lateinit var  sh: WeakReference< SurfaceHolder>
+  //  private var mCloudThread: HandlerThread? = null
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,33 +60,34 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             Log.e(TAG, "No permission")
             return
         }
-        var stepcontroll = PwmController("I2C1")
+        var stepcontroll: Single<PwmController> = Single.just(PwmController("I2C1"))
+                .subscribeOn(Schedulers.newThread())
 
         button4.setOnClickListener {
             var start = System.currentTimeMillis()
-            Thread {
-                var m1 = StepperMotorController(stepcontroll, PwmVals.STEPPER_TWO)
-                m1.setSpeed(50)
-                m1.step(8000, StepperDirection.BACKWARD, StepperStyle.DOUBLE)
+            stepcontroll.observeOn(Schedulers.newThread()).subscribe { t1, _->
+
+                var m1 = StepperMotorController(t1, PwmVals.STEPPER_TWO)
+                m1.setSpeed(500)
+                m1.step(800, StepperDirection.BACKWARD, StepperStyle.DOUBLE)
                 val b = System.currentTimeMillis() - start
                 Log.d(TAG, b.toString() + "=====================")
                 m1.reset()
-
-            }.start()
-            Thread {
-                var m2 = StepperMotorController(stepcontroll, PwmVals.STEPPER_ONE)
+                Log.i("Motor1 thread",Thread.currentThread().id.toString())
+            }
+            stepcontroll.observeOn(Schedulers.newThread()).subscribe { t1, _ ->
+                var m2 = StepperMotorController(t1, PwmVals.STEPPER_ONE)
                 m2.setSpeed(50)
-                m2.step(8000, StepperDirection.FORWARD, StepperStyle.DOUBLE)
+                m2.step(800, StepperDirection.FORWARD, StepperStyle.DOUBLE)
                 val b = System.currentTimeMillis() - start
                 Log.d(TAG, b.toString() + "=====================")
                 m2.reset()
+                Log.i("Motor2 thread",Thread.currentThread().id.toString())
+            }
 
-            }.start()
-
+            Log.i("Main thread",Thread.currentThread().id.toString())
             // stepperone!!.start()
             // var  stepperoneHandler = Handler(mCameraThread!!.looper)
-
-
         }
 
         val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(
@@ -90,18 +96,21 @@ class MainActivity : Activity(), LoaderCallbackInterface {
             !mediaStorageDir.mkdirs()
         }
         pt = mediaStorageDir.path + File.separator
-        sh = surfaceView3.holder
+        sh = WeakReference(surfaceView3.holder)
         mCameraThread = HandlerThread("CameraBackground")
         mCameraThread!!.start()
         mCameraHandler = Handler(mCameraThread!!.looper)
         val button = button
         button.setOnClickListener {
+
             mCamera!!.takePicture()
         }
-        mCamera = CameraLib.instance
-        mCamera!!.initializeCamera(this, mCameraHandler!!, mOnImageAvailableListener, sh)
-    }
 
+            mCamera = CameraLib.instance
+            mCamera!!.initializeCamera(this, mCameraHandler!!, mOnImageAvailableListener, sh.get()!!)
+        Log.i("main thread",Thread.currentThread().id.toString())
+
+    }
     override fun onDestroy() {
 
         super.onDestroy()
@@ -125,60 +134,61 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     private val mOnImageAvailableListener = OnImageAvailableListener { reader ->
 
 
+        var imgob: Flowable<Mat> = Flowable.create<Mat>({ it ->
+            val image = reader.acquireLatestImage()
+            if (image != null) {
+                var width = image.width
+                var height = image.height
+                val imageBuf = image.planes[0].buffer
+                val imageBytes = ByteArray(imageBuf.remaining())
+              var a=  BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.size)
+                imageBuf.get(imageBytes)
+                image.close()
 
-            var imgob: Flowable<Mat> = Flowable.create<Mat>({
-                it->
-                val image = reader.acquireLatestImage()
-                if (image!=null) {
-                    var width =image.width
-                    var height=image.height
-                    val imageBuf = image.planes[0].buffer
-                    val imageBytes = ByteArray(imageBuf.remaining())
-                    imageBuf.get(imageBytes)
-                    image.close()
-                    var img1 = Mat(1, height *width, CvType.CV_8UC3, imageBuf)
-                    var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
+                var img1 = Mat(1,height*width, CvType.CV_8UC3, imageBuf)
+                var img = Imgcodecs.imdecode(img1, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
 
+                Log.i("Threadonlistenr",Thread.currentThread().id.toString())
+                if (!it.isCancelled) {
+                    it.onNext(img)
 
-                    if  (!it.isCancelled)
-                    {
-                        it.onNext(img)
-                    }
-                    else
-                    {
-                        Log.d("Subscribe", "cancelled")
-                    }
-                }else{
-                    Log.d("Image" ,"image null")
-                   // image!!.close()
+                } else {
+                    Log.d("Subscribe", "cancelled")
                 }
+            } else {
+                Log.d("Image", "image null")
+                // image!!.close()
+            }
 
-            },BackpressureStrategy.BUFFER).subscribeOn(Schedulers.io()).take(2)
-                //emitter.onComplete()
-           // imgob.subscribeOn(Schedulers.io())
-            onPictureTaken(imgob.timeout(10,TimeUnit.SECONDS))
+        }, BackpressureStrategy.LATEST).take(1)
+        //emitter.onComplete()
+        // imgob.subscribeOn(Schedulers.io())
+
+        onPictureTaken(imgob.timeout(200, TimeUnit.MILLISECONDS))
 
     }
 
     private fun onPictureTaken(ima: Flowable<Mat>) {
-      var disp=  CompositeDisposable()
-      disp.add(  run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED).subscribeOn(Schedulers.io())
-                 .observeOn(AndroidSchedulers.mainThread())
-               .subscribe({
+        var disp = CompositeDisposable()
 
-                         var canvs = sh.lockCanvas()
-                         sh.setFixedSize(640, 480)
-                         canvs.drawBitmap(it, 0F, 0F, null)
-                         sh.unlockCanvasAndPost(canvs)
+        disp.add(run(ima, pt + "tt.png", Imgproc.TM_CCOEFF_NORMED).subscribeOn(Schedulers.single())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({
 
-                     },{
-                     Log.d("error",it.message)
+
+                    var canvs = sh.get()!!.lockCanvas()
+                    sh.get()!!.setFixedSize(640, 480)
+                    canvs.drawBitmap(it, 0F, 0F, null)
+                    sh.get()!!.unlockCanvasAndPost(canvs)
+                    ima.subscribe().dispose()
+                    it.recycle()
+                }, {
+                    Log.d("error", it.message)
                     // throw it
-                 }))
+                }))
 
 
-     //  disp.clear()
-      //  disp.dispose()
+
     }
 
     protected var mOpenCVCallBack: BaseLoaderCallback = object : BaseLoaderCallback(this) {
@@ -206,11 +216,9 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     protected fun onOpenCVReady() {
         Toast.makeText(applicationContext, "opencv ready", Toast.LENGTH_LONG).show()
     }
-
     override fun onManagerConnected(status: Int) {
         Log.e("OPENCV", "connected" + Int)
     }
-
     override fun onPackageInstall(operation: Int,
                                   callback: InstallCallbackInterface) {
         // TODO Auto-generated method stub
@@ -219,23 +227,25 @@ class MainActivity : Activity(), LoaderCallbackInterface {
     public fun run(img: Flowable<Mat>, templateFile: String,
                    match_method: Int): Flowable<Bitmap> {
         //   println("\nRunning Template Matching")
-        var tt = Flowable.create<Mat>( {
-          var tt=  Imgcodecs.imread(templateFile, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
+        var tt = Flowable.create<Mat>({
+            var tt = Imgcodecs.imread(templateFile, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE)
+            Log.i("run thread",Thread.currentThread().id.toString())
             it.onNext(tt)
-        },BackpressureStrategy.BUFFER).subscribeOn(Schedulers.io())
 
-        var obBmp= img.zipWith(tt, BiFunction { cameraImg: Mat, template: Mat ->
+        }, BackpressureStrategy.LATEST)
+        Log.i("Motor1 thread",Thread.currentThread().id.toString())
+        return img.zipWith(tt, BiFunction { cameraImg: Mat, template: Mat ->
             Log.d("Camera++++++++++", cameraImg.cols().toString())
-            val result_cols = cameraImg.cols() -template.cols() + 1
+            val result_cols = cameraImg.cols() - template.cols() + 1
             val result_rows = cameraImg.rows() - template.rows() + 1
             val result = Mat(result_rows, result_cols, CvType.CV_32FC1)
             Imgproc.matchTemplate(cameraImg, template, result, match_method)
             Imgproc.threshold(result, result, 0.90, 1.0, Imgproc.THRESH_TOZERO);
             var maxval: Double
             var matchLoc: Point
-
-            loop@ while (true) {
-                Log.e("DEMO", "__________")
+            Log.i("Motor1 thread",Thread.currentThread().id.toString())
+           // loop@ while (true) {
+               // Log.e("DEMO", "__________")
                 var mmr = Core.minMaxLoc(result)
                 maxval = mmr.maxVal
                 if (match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED) {
@@ -248,23 +258,26 @@ class MainActivity : Activity(), LoaderCallbackInterface {
                 if (maxval > .90) {
                     Imgproc.rectangle(cameraImg, matchLoc, Point(matchLoc.x + template.cols(),
                             matchLoc.y + template.rows()), Scalar(0.0, 255.0, 0.0))
-                    Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + template.cols(),
-                            matchLoc.y + template.rows()), Scalar(0.0, 255.0, 0.0), -1)
+                   // Imgproc.rectangle(result, matchLoc, Point(matchLoc.x + template.cols(), matchLoc.y + template.rows()), Scalar(0.0, 255.0, 0.0), -1)
 
-                } else {
-                    break@loop
                 }
-            }
-            Imgcodecs.imwrite(pt + "kk3.png", cameraImg)
+                //else {
+                   // break@loop
+                //}
+           // }
+           // Imgcodecs.imwrite(pt + "kk3.png", cameraImg)
             val bm = Bitmap.createBitmap(cameraImg.cols(), cameraImg.rows(), Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(cameraImg, bm)
-
+            Log.i("Run2",Thread.currentThread().id.toString())
+            template.release()
+            cameraImg.release()
             return@BiFunction bm
-        }).subscribeOn(Schedulers.io())
 
-      //  img.subscribe().dispose()
+        })
+        //Log.i("Run1",Thread.currentThread().id.toString())
+        //  img.subscribe().dispose()
         //tt.subscribe().dispose()
-return obBmp
+        //return obBmp
 
     }
 
